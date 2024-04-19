@@ -8,63 +8,65 @@ import {
   FlatList,
   TouchableOpacity,
 } from "react-native";
-import Task from "./Task";
-import AddTaskView from "./AddTaskView";
+import Task from "./components/Task";
+import AddTaskView from "./components/AddTaskView";
 import { useEffect, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
+  const serverAddress = "http://webserv.ryanrosenblatt.com/api/tasks";
 
-  const handleAddTask = (task) => {
-    if (task.trim().length > 1) {
-      const newTasks = [...tasks, { text: task, isCompleted: false }];
-      setTasks(newTasks);
-      saveTasks(newTasks);
+  const handleAddTask = async (task) => {
+    if (task.trim().length > 0) {
+      try {
+        const response = await axios.post(serverAddress, { title: task, isCompleted: false});
+        setTasks(tasks => [...tasks, response.data]);
+
+      } catch (e) {
+        console.error("Error adding a task: ", e);
+    }
+  }
+  };
+
+  const onTaskPress = async (index) => {
+    const taskToUpdate = tasks[index];
+    taskToUpdate.isCompleted = !taskToUpdate.isCompleted;
+
+    try {
+      await axios.put(`${serverAddress}/${taskToUpdate.id}`, taskToUpdate);
+      const updatedTasks = [...tasks];
+      if (taskToUpdate.isCompleted) {
+        const [updatedTask] = updatedTasks.splice(index, 1);
+        updatedTasks.push(updatedTask);
+      }
+      setTasks(updatedTasks);
+    } catch (e) {
+      console.error("Error updating a task: ", e);
     }
   };
 
-  const onTaskPress = (index) => {
-    const updatedTasks = [...tasks];
 
-    updatedTasks[index].isCompleted = !updatedTasks[index].isCompleted;
-
-    if(updatedTasks[index].isCompleted) {
-      const [removedTask] = updatedTasks.splice(index, 1);
-      updatedTasks.push(removedTask);
+  const deleteTask = async (id) => {
+    try {
+      setTasks(tasks.filter((task) => task.id !== id));
+      const response = await axios.delete(`${serverAddress}/${id}`);
+    } catch (error) {
+      console.error("Error deleting a task: ", error);
     }
-
-    setTasks(updatedTasks);
-    saveTasks(updatedTasks);
-  }
-
-  const deleteTask = (index) => {
-    const updatedTasks = [...tasks];
-    updatedTasks.splice(index, 1); 
-    setTasks(updatedTasks);
-    saveTasks(updatedTasks)
-  }
-
-    const saveTasks = async (tasks) => {
-      try {
-        await AsyncStorage.setItem("todo-list", JSON.stringify(tasks));
-      } catch (e) {
-        console.log("Error saving tasks: ", e);
-      }
-    };
+  };
 
 
-  useEffect(() => {
     const loadTasks = async () => {
       try {
-        const storedTasks = await AsyncStorage.getItem("todo-list");
-        if (storedTasks !== null) {
-          setTasks(JSON.parse(storedTasks));
-        }
+        const response = await axios.get(serverAddress);
+        setTasks(response.data);
       } catch (e) {
-        console.log("Error saving tasks: ", e);
-      }
+        console.error("Error loading tasks: ", e);
+      } 
     };
+  useEffect(() => {
+    
     loadTasks();
   }, []);
 
@@ -80,17 +82,13 @@ export default function App() {
           renderItem={({ item, index }) => (
             <View style={styles.taskRow}>
               <Task
-                key={item.rank}
-                text={item.text}
+                key={item._id}
+                text={item.title}
                 onPress={() => onTaskPress(index)}
                 isCompleted={item.isCompleted}
                 style={styles.task}
+                onDelete={() => deleteTask(item.id)}
               />
-              <View style={styles.dltContainer}>
-                <TouchableOpacity style={styles.deleteButton} onPress={() => deleteTask(index)}>
-                  <Text>X</Text>
-                </TouchableOpacity>
-              </View>
             </View>
           )}
         />
@@ -125,24 +123,16 @@ const styles = StyleSheet.create({
   },
   addTaskBox: {
     paddingHorizontal: 15,
-    width: "100%",
-
-    backgroundColor: "#F5F1F1",
+    width: "100%"
   },
   taskRow: {
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
-  },
-  deleteButton: {
-    padding: 8, // Easy to tap
-    backgroundColor: "#ffcccc", // A light red background for the delete button
-    borderRadius: 5, // Rounded corners for the button
+    justifyContent: "center",
   },
   task: {
     borderRadius: 5,
     fontSize: 14,
-  },
-  dltContainer: {
-  },
+  }
 });

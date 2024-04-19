@@ -2,7 +2,7 @@ import React from "react";
 import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
 
 const Task = (props) => {
-  const { text, isCompleted, onPress } = props;
+  const { text, isCompleted, onPress, onDelete } = props;
 
   return (
     <TouchableOpacity onPress={onPress}>
@@ -15,6 +15,12 @@ const Task = (props) => {
             {text}
           </Text>
         </View>
+
+        <View>
+          <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+            <Text>X</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -25,13 +31,13 @@ export default Task;
 const styles = StyleSheet.create({
   taskWrapper: {
     padding: 16,
-    marginLeft: 20,
+    marginHorizontal: 20,
     backgroundColor: "#fff",
     alignItems: "center",
     flexDirection: "row",
     marginVertical: 8,
     borderRadius: 8,
-    width: "80%",
+    width: "90%",
 
     // Why is it seperate for android and ios??
     elevation: 2,
@@ -50,13 +56,19 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     color: "#000",
-    fontSize: 15,
+    fontSize: 20,
+    textAlign: "center",
   },
   completedText: {
     textDecorationLine: "line-through",
     color: "#888",
   },
   taskText: {
-    width: "90%"
-  }
+    width: "80%"
+  },
+  deleteButton: {
+    padding: 12,
+    backgroundColor: "#ffcccc",
+    borderRadius: 5
+  },
 });
